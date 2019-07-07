@@ -43,3 +43,28 @@ SSR，其含义就是首频服务端渲染！</br>
 也就是说，用户想要像ajax兴起之前那样服务端渲染，那就每点击一次跳转链接，就手动按F5刷新一下咯~</br>
 (用户：我累不累呀~？)
 
+
+# SSR 步骤
+
+## 修改文件
+
+/src/app.js
+```
+import Vue from 'vue'
+import App from './App.vue'
+import {createStore} from './store'
+import {createRouter} from './router'
+
+export function createApp () {
+  const store = createStore()
+  const router = createRouter()
+  const app = new Vue({
+    router
+    ,store
+    ,render: h => h(App)
+  })
+  return { app, store, router }
+}
+
+```
+
