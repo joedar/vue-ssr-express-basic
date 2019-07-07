@@ -24,7 +24,6 @@ server.use('/favicon.ico', express.static(`${staticPath}/favicon.ico`))
 const routes = require('./src/routes')
 
 server.get('*', (req, res) => {
-
   //-------------------------------------
   // 根据 req.url 正确匹配 routes 的标题
   // 以保证刷新页面渲染正确的router标题
@@ -37,22 +36,17 @@ server.get('*', (req, res) => {
     return str
   }())
 
-  const context = {
-    url : req.url
-    ,title : title
-  }
+  const context = { url : req.url, title : title }
 
   const renderer = createBundleRenderer(serverBundle, {
-    template,
-    clientManifest,
+    template
+    ,clientManifest
   })
 
   renderer.renderToString(context, (error, html) => {
-
-    if (error) {
+    if(error){
       console.error('Controller.render', { error })
     }
-
     res.send(html)
   })
 })
