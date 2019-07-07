@@ -45,11 +45,13 @@ SSR，其含义就是首频服务端渲染！</br>
 
 
 # SSR 步骤
+可用 vue-cli 脚手架生成一个项目，并安装 vue-router 和 vuex， 还有express<br>
+以及相关依赖
+
 
 ## 修改文件
-
-/src/app.js
 ```
+// /src/app.js
 import Vue from 'vue'
 import App from './App.vue'
 import {createStore} from './store'
