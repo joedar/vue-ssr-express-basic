@@ -6,16 +6,8 @@ export default context => new Promise((resolve, reject) => {
 
   router.push(url)
 
-  //server side render completly
-  // router.beforeResolve((to, from, next) => {
-  //   store.replaceState(context.state)
-
-  //   next()
-  // })
-
   router.onReady(() => {
     const matchedComponents = router.getMatchedComponents()
-
     if (!matchedComponents.length) {
       return reject({ code: 404 })
     }
