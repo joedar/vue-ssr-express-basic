@@ -49,9 +49,10 @@ SSR，其含义就是首频服务端渲染！</br>
 以及相关依赖
 
 
-## 修改文件
+## 步骤一：修改文件
+/src/app.js
 ```
-// /src/app.js
+
 import Vue from 'vue'
 import App from './App.vue'
 import {createStore} from './store'
@@ -69,4 +70,167 @@ export function createApp () {
 }
 
 ```
+<br>
+
+
+/src/router.js
+```
+import Vue from 'vue'
+import Router from 'vue-router'
+Vue.use(Router)
+
+// 引入routes配置
+const routes = require('./routes')
+
+export const createRouter = () => {
+  return new Router({
+    mode : 'history'
+    ,fallback : false
+    ,routes
+  })
+}
+```
+<br>
+
+
+/src/store.js
+```
+import Vue from 'vue'
+import Vuex from 'vuex'
+Vue.use(Vuex)
+
+export function createStore () {
+  return new Vuex.Store({
+    modules : {
+      namespaced: true
+      ,state: {}
+      ,actions: {}
+      ,getters: {}
+      ,mutations: {}
+    }
+  })
+}
+```
+<br>
+
+
+/src/routes/index.js
+```
+const Home = () => import('./Home.vue')
+const Search = () => import('./Search.vue')
+const Product = () => import('./Product.vue')
+const NotFound = () => import('./NotFound.vue')
+
+const routes = [
+	{ path: '/', component: Home, meta : { title : '首页Page' } }
+	,{ path: '/search', component: Search, meta : { title : '搜索Page' } }
+	,{ path: '/product', component: Product, meta : { title : '产品Page' } }
+	,{ path: '*', component: NotFound, meta : { title : '找不到Page' } }
+]
+
+module.exports = routes
+```
+<br>
+
+
+/src/routes/xxx.vue
+```
+<template>
+  <div class="about">
+    <h3>this is about page</h3>
+  </div>
+</template>
+```
+<br>
+
+
+/src/App.vue
+```
+<template>
+  <div>
+    <div>
+      <router-link to="/">首页</router-link>
+      <router-link to="/search">搜索</router-link>
+      <router-link to="/product">产品</router-link>
+      <router-link to="/haha">其他页面</router-link>
+    </div>
+    <router-view></router-view>
+  </div>
+</template>
+```
+
+
+## 步骤二：创建文件
+创建文件 - 客户端入口文件<br>
+/src/entry-client.js
+```
+import 'core-js/stable/promise'
+import { createApp } from './app'
+const { app, store, router } = createApp()
+
+//--------------------------------------------------------------------------
+// use this instance methods to display the title of the route in real time
+// 用此方法 实时显示路由的标题
+//--------------------------------------------------------------------------
+router.beforeEach((to, from, next) => {
+  if(to.meta.title){
+    document.title = to.meta.title
+  }
+  next()
+})
+
+if (window.__INITIAL_STATE__) {
+  store.replaceState(window.__INITIAL_STATE__)
+}
+
+router.onReady(() => {
+  app.$mount('#app')
+})
+```
+<br>
+
+
+创建文件 - 服务端入口文件<br>
+/src/entry-server.js
+```
+import { createApp } from './app'
+
+export default context => new Promise((resolve, reject) => {
+  const { app, router, store } = createApp()
+  const { url } = context
+
+  router.push(url)
+
+  router.onReady(() => {
+    const matchedComponents = router.getMatchedComponents()
+    if (!matchedComponents.length) {
+      return reject({ code: 404 })
+    }
+
+    return resolve(app)
+  }, reject)
+})
+```
+<br>
+
+
+创建文件 - html模版文件
+/template.html
+```
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <title>{{title}}</title>
+  </head>
+  <body>
+    <div id="app">
+      <!--vue-ssr-outlet-->
+    </div>
+  </body>
+</html>
+```
+<br>
 
