@@ -234,3 +234,146 @@ export default context => new Promise((resolve, reject) => {
 ```
 <br>
 
+
+## 步骤二：创建webpack 打包客户端js及服务端js
+/webpack/webpack.config.js
+```
+const merge = require('webpack-merge')
+const serverConfig = require('./webpack.server')
+const clientConfig = require('./webpack.client')
+const { plugins } = require('./part/plugins')
+const alias = require('./part/alias')
+const isProd = process.env.NODE_ENV === 'production'
+
+const config = {
+  mode : isProd ? 'production' : 'development'
+  ,watch : isProd ? false : true
+  ,devtool : isProd? false : 'source-map'
+  ,output : {
+    publicPath: '/static/'
+  }
+  ,resolve: { alias }
+  ,plugins
+}
+
+module.exports = [merge(config, serverConfig), merge(config, clientConfig)]
+```
+<br>
+
+
+客户端js 运行于客户端<br>
+/webpack/webpack.client.js
+```
+const path = require('path')
+const optimization = require('./part/optimization')
+const { clientPlugins } = require('./part/plugins')
+const { clientRules } = require('./part/rules')
+
+module.exports = {
+  entry: [
+    path.join(__dirname, '..', 'src', 'entry-client.js')
+    ,path.join(__dirname, '..', 'src', 'images', 'favicon.ico')
+  ]
+  ,module: { rules: clientRules }
+  ,plugins: clientPlugins
+  ,optimization
+}
+```
+<br>
+
+
+服务端js 运行于服务端<br>
+/webpack/webpack.server.js
+```
+const path = require('path')
+const nodeExternals = require('webpack-node-externals')
+const { serverPlugins } = require('./part/plugins')
+const { serverRules } = require('./part/rules')
+
+module.exports = {
+  entry : path.join(__dirname, '..', 'src', 'entry-server.js')
+  ,target : 'node'
+  ,output : {
+    filename: 'server.bundle.js'
+    ,libraryTarget: 'commonjs2'
+  }
+  ,module : { rules: serverRules }
+  ,externals: nodeExternals({ whitelist: /\.css$/ })
+  ,plugins : serverPlugins
+}
+```
+
+
+## 步骤三：创建启动服务文件 我用的是express
+/server.js
+```
+const express = require('express')
+const path = require('path')
+const server = express()
+const { createBundleRenderer } = require('vue-server-renderer')
+
+// 服务端口
+const port = process.env.PORT || 8000
+
+// 引入模版
+const tempPath = path.join(__dirname, 'template.html')
+const template = require('fs').readFileSync(tempPath,'utf-8')
+// 引入客户端-Manifest
+const clientManifest = require('./dist/vue-ssr-client-manifest.json')
+// 引入服务端-Bundle
+const serverBundle = require('./dist/vue-ssr-server-bundle.json')
+// 引入静态目录
+const staticPath = path.resolve(__dirname, 'dist')
+
+// 服务使用静态目录
+server.use('/static', express.static(staticPath))
+server.use('/favicon.ico', express.static(`${staticPath}/favicon.ico`))
+
+// 引入routes配置
+const routes = require('./src/routes')
+
+server.get('*', (req, res) => {
+  //-------------------------------------
+  // 根据 req.url 正确匹配 routes 的标题
+  // 以保证刷新页面渲染正确的router标题
+  //-------------------------------------
+  const title = (function(){
+    let str = 'hello page'
+    for(let i=0; i<routes.length; i++){
+      if (req.url === routes[i].path) str = routes[i].meta.title
+    }
+    return str
+  }())
+
+  const context = { url : req.url, title : title }
+
+  const renderer = createBundleRenderer(serverBundle, {
+    template
+    ,clientManifest
+  })
+
+  renderer.renderToString(context, (error, html) => {
+    if(error){
+      console.error('Controller.render', { error })
+    }
+    res.send(html)
+  })
+})
+
+server.listen(port, () => {
+    console.log(`Example app listening on ${port}!`)
+})
+```
+
+
+## 步骤三：修改package.json命令
+/package.json
+```
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "eslint": "eslint --ext .js --ext .vue ./ --max-warnings=0",
+    "build:dev": "cross-env NODE_ENV=development webpack --config ./webpack/webpack.config.js && node server.js",
+    "build:prod": "cross-env NODE_ENV=production webpack --config ./webpack/webpack.config.js && node server.js"
+  },
+```
